@@ -5,7 +5,7 @@
 #include <limits>
 #define PY_SSIZE_T_CLEAN
 #include <Python.h>
-#include <python3.8/object.h>
+#include <python3.10/object.h>
 #define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
 #include <numpy/ndarraytypes.h>
 #include <numpy/arrayobject.h>
@@ -265,22 +265,36 @@ Matplot::Matplot(const Figure& fig) {
     }
     Py_IncRef(gridspec_kw);
   }
-
   // r,c,sharex,sharey,squeeze,subplot_kw,gridspec_kw
-  PyObject* result = PyObject_CallMethod(pyfig, "subplots", "iiOOOOO", fig.nrow, fig.ncol, Py_False, Py_False, Py_False,
-                                         Py_None, (gridspec_kw == nullptr) ? new_none() : gridspec_kw);
+  PyObject * keywords = PyDict_New();
+  PyObject * dummy = PyTuple_New(0);
+  PyDict_SetItemString(keywords,"nrows",PyLong_FromLong(fig.nrow));
+  PyDict_SetItemString(keywords,"ncols",PyLong_FromLong(fig.ncol));
+  PyDict_SetItemString(keywords,"gridspec_kw",(gridspec_kw == nullptr) ? new_none() : gridspec_kw);
+  PyObject* result = PyObject_Call(PyObject_GetAttrString(pyfig, "subplots"), dummy, keywords);
+  Py_DECREF(keywords);
+  Py_DECREF(dummy);
+  // PyObject* result = PyObject_CallMethod(pyfig, "subplots", "ii", fig.nrow, fig.ncol);
   if (result == nullptr) {
     throw std::runtime_error("Figure.subplots() failed");
   }
 
+  if (result == nullptr) {
+    throw std::runtime_error("Figure.subplots() failed");
+  }
   std::vector<PyObject*> pyaxes(fig.axes_.size());
   for (Py_intptr_t i = 0; i < fig.nrow; i++) {
     for (Py_intptr_t j = 0; j < fig.ncol; j++) {
       int idx = i * fig.ncol + j;
-      auto* ax = pyaxes[idx] =
-          *reinterpret_cast<PyObject**>(PyArray_GETPTR2(reinterpret_cast<PyArrayObject*>(result), i, j));
+      PyObject* ax = nullptr;
+      if (fig.nrow ==1 && fig.nrow ==1)
+      {
+        ax = pyaxes[0] = result;
+      } else {
+        ax = pyaxes[idx] =
+            *reinterpret_cast<PyObject**>(PyArray_GETPTR2(reinterpret_cast<PyArrayObject*>(result), i, j));
+      }
       Py_IncRef(ax);
-
       auto pair = std::make_pair(static_cast<int>(i + 1), static_cast<int>(j + 1));
       if (fig.twinx_idx_.find(pair) != fig.twinx_idx_.end()) {
         auto* twin_ax = pyaxes[fig.twinx_idx_.at(pair)] = PyObject_CallMethod(ax, "twinx", nullptr);
@@ -292,6 +306,7 @@ Matplot::Matplot(const Figure& fig) {
         Py_DecRef(ax_get_lines);
         Py_DecRef(twin_get_lines);
       }
+      // throw std::runtime_error("PASS!");
       if (fig.twiny_idx_.find(pair) != fig.twiny_idx_.end()) {
         auto* twin_ax = pyaxes[fig.twiny_idx_.at(pair)] = PyObject_CallMethod(ax, "twiny", nullptr);
         auto* ax_get_lines = PyObject_GetAttrString(ax, "_get_lines");
@@ -305,7 +320,7 @@ Matplot::Matplot(const Figure& fig) {
     }
   }
   Py_DecRef(result);
-
+  
   for (size_t ax_i = 0; ax_i < fig.axes_.size(); ax_i++) {
     const auto& ax = fig.axes_[ax_i];
     auto* pyax = pyaxes[ax_i];

@@ -12,7 +12,7 @@ cc_library(
         "-std=c++17",
     ],
     linkopts = [
-        "-lpython3.8",
+        "-lpython3.10",
         "-lstdc++fs",
     ],
 )
