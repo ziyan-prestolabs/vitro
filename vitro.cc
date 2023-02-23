@@ -265,7 +265,7 @@ Matplot::Matplot(const Figure& fig) {
     }
     Py_IncRef(gridspec_kw);
   }
-  // r,c,sharex,sharey,squeeze,subplot_kw,gridspec_kw
+
   PyObject * keywords = PyDict_New();
   PyObject * dummy = PyTuple_New(0);
   PyDict_SetItemString(keywords,"nrows",PyLong_FromLong(fig.nrow));
@@ -274,7 +274,7 @@ Matplot::Matplot(const Figure& fig) {
   PyObject* result = PyObject_Call(PyObject_GetAttrString(pyfig, "subplots"), dummy, keywords);
   Py_DECREF(keywords);
   Py_DECREF(dummy);
-  // PyObject* result = PyObject_CallMethod(pyfig, "subplots", "ii", fig.nrow, fig.ncol);
+
   if (result == nullptr) {
     throw std::runtime_error("Figure.subplots() failed");
   }
@@ -306,7 +306,7 @@ Matplot::Matplot(const Figure& fig) {
         Py_DecRef(ax_get_lines);
         Py_DecRef(twin_get_lines);
       }
-      // throw std::runtime_error("PASS!");
+
       if (fig.twiny_idx_.find(pair) != fig.twiny_idx_.end()) {
         auto* twin_ax = pyaxes[fig.twiny_idx_.at(pair)] = PyObject_CallMethod(ax, "twiny", nullptr);
         auto* ax_get_lines = PyObject_GetAttrString(ax, "_get_lines");
